@@ -1,5 +1,7 @@
 # imageresizerClass
 
+Ref: https://github.com/claviska/SimpleImage
+
 API
 
 Order of awesomeness:
