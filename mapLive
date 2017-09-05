@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>RoutePlanner</title>
+<link rel="stylesheet" type="text/css" href="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/css/bootstrap-combined.min.css">
+<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+<script src="https://netdna.bootstrapcdn.com/twitter-bootstrap/2.3.1/js/bootstrap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui/1.12.1/jquery-ui.js"></script>
+<script type="text/javascript" src="https://maps.googleapis.com/maps/api/js?v=3.exp&key=AIzaSyBvtrK9v0wezkUv5et68obxKfSFuB7YOwI&libraries=places"></script>
+
+<script type="text/javascript">
+var locations=[];
+$(document).ready(function(){
+  function makeLocations(){
+  	locations=[];		
+        var acInputs = $(".waypoints");	    
+	    for (var i = 0; i < acInputs.length; i++) {
+	       var makId= $('#way_'+i);
+	  	  locations.push({'lat':makId.attr('lat'),'lng':makId.attr('lng'),'placeName':makId.val()});	
+	    }
+	  }
+
+  /*Handle Multiple Autocimplete Instance*/	
+  function initAutoCompleteFunc() {
+
+	    var acInputs = $(".waypoints");
+	     console.log(acInputs.length);
+	    for (var i = 0; i < acInputs.length; i++) {
+	         var autocomplete = new google.maps.places.Autocomplete(acInputs[i]);
+	         autocomplete.inputId=acInputs[i].id;
+	         autocomplete.inputIdName='way_'+i;
+
+	        google.maps.event.addListener(autocomplete, 'place_changed', function (e) {
+	        	var place = autocomplete.getPlace();	
+	        	console.log(this.inputIdName);
+	        	 $('#'+this.inputIdName).attr('lat',place.geometry.location.lat());
+
+	        	 $('#'+this.inputIdName).attr('lng',place.geometry.location.lng());
+
+	        	/* locations.push({'lat':place.geometry.location.lat(),'lng':place.geometry.location.lng(),'placeName':place.formatted_address});*/	        	
+	        	 makeLocations();	  
+	        	 initMap();
+	        });
+	    }
+	}
+    /*Handle Multiple Autocimplete Instance*/	
+    initAutoCompleteFunc();
+
+    var maxField = 10; //Input fields increment limitation
+    var addButton = $('.add_button'); //Add button selector
+    var wrapper = $('.field_wrapper'); //Input field wrapper
+  
+    var x = 0; //Initial field counter is 1
+    $(addButton).click(function(){ //Once add button is clicked
+        if(x < maxField){ //Check maximum number of input fields
+            x++; //Increment field counter
+
+  var fieldHTML = '<div><a href="javascript:void(0);" class="moveMe">Move</a><input type="text" name="field_name[]" value="" id="way_'+x+'" class="waypoints"/><a href="javascript:void(0);" class="remove_button" title="Remove field"><img src="remove-icon.png"/></a></div>'; 
+  //New input field html 
+            $(wrapper).append(fieldHTML); // Add field html
+            initAutoCompleteFunc();
+        }
+    });
+    $(wrapper).on('click', '.remove_button', function(e){ //Once remove button is clicked
+        e.preventDefault();
+        $(this).parent('div').remove(); //Remove field html
+        x--; //Decrement field counter
+    });
+
+    $(".field_wrapper").sortable({    
+        handle:'.moveMe',
+         change: function( event, ui ) {         	
+         } ,
+         update:function(event,ui){
+         	console.log("############STop####################3");
+         locations=[];
+         	$(this).children().each(function (i, elem) {
+               var li = $(elem); // cache lookup
+               var makIdname= li.find('input').attr('id');    
+               var makId= $('#'+makIdname);        		
+	  	  		locations.push({'lat':makId.attr('lat'),'lng':makId.attr('lng'),'placeName':makId.val()});
+            });
+		    //makeLocations();
+		    console.log(locations);
+         	 initMap();
+         }  
+    });
+     $( ".field_wrapper" ).disableSelection();
+
+
+function initMap() {
+  var pointA = new google.maps.LatLng(locations[0].lat, locations[0].lng),
+         pointB = new google.maps.LatLng(locations[locations.length - 1].lat, locations[locations.length - 1].lng),
+        myOptions = {
+            zoom: 7,
+            center: pointA
+        },
+        map = new google.maps.Map(document.getElementById('map-canvas'), myOptions);
+      
+        // Instantiate a directions service.
+        directionsService = new google.maps.DirectionsService,
+        directionsDisplay = new google.maps.DirectionsRenderer({
+            map: map
+        });
+		var request = {
+		    travelMode: google.maps.TravelMode.DRIVING
+		  };
+      if(locations){
+       	 	$.each(locations,function(index,val){
+                 marker = new google.maps.Marker({
+		          position: new google.maps.LatLng(locations[index].lat, locations[index].lng),
+		         title: locations[index].placeName,
+	          // label: "A",
+		      });
+			   if (index == 0) request.origin = marker.getPosition();
+			    else if (index == locations.length - 1) request.destination = marker.getPosition();
+			    else {
+			      if (!request.waypoints) request.waypoints = [];
+			      request.waypoints.push({
+			        location: marker.getPosition(),
+			        stopover: true
+			      });
+			    }
+       	 	});
+       	  //calculateAndDisplayRoute(directionsService, directionsDisplay, pointA, pointB);	  
+       } 
+directionsDisplay.set('directions', null);
+
+		directionsService.route(request, function(result, status) {
+		    if (status == google.maps.DirectionsStatus.OK) {
+		      directionsDisplay.setDirections(result);
+		    }
+		  });
+}
+
+
+
+function calculateAndDisplayRoute(directionsService, directionsDisplay, pointA, pointB) {
+    directionsService.route({
+        origin: pointA,
+        destination: pointB,
+        avoidTolls: true,
+        avoidHighways: false,
+        travelMode: google.maps.TravelMode.DRIVING
+    }, function (response, status) {
+        if (status == google.maps.DirectionsStatus.OK) {
+            directionsDisplay.setDirections(response);
+        } else {
+            window.alert('Directions request failed due to ' + status);
+        }
+    });
+}
+
+
+
+
+});
+</script>
+<style type="text/css">
+input[type="text"]{height:20px; vertical-align:top;}
+.field_wrapper div{ margin-bottom:10px;}
+.add_button{ margin-top:10px; margin-left:10px;vertical-align: text-bottom;}
+.remove_button{ margin-top:10px; margin-left:10px;vertical-align: text-bottom;}
+.placeholder {
+    border: 1px solid green;
+    background-color: white;
+    -webkit-box-shadow: 0px 0px 10px #888;
+    -moz-box-shadow: 0px 0px 10px #888;
+    box-shadow: 0px 0px 10px #888;
+}
+
+
+</style>
+</head>
+<body>
+<div class="field_wrapper">
+	<div>
+	<a href="javascript:void(0);" class="moveMe">Move</a>
+    	<input type="text" name="field_name[]" id="way_0" value="" class="waypoints" />
+   
+        <a href="javascript:void(0);" class="add_button" title="Add field" ><img src="add-icon.png"/></a>
+    </div>
+</div>
+
+<div id="map-canvas" style="width:400px; height: 400px;"></div>
+</body>
+</html>
