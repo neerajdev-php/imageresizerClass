@@ -1,0 +1,75 @@
+function wc_custom_change_flat_rates_cost( $rates, $package ) {
+	$destination = $package['destination'];
+	$country     = $destination['country'];
+     $weight = '';
+     $productweight    = '';
+     $extraInserWeight = '';
+     $totalCardWeight  = '';
+	 foreach ( $package['contents'] as $item_id => $values ) 
+      { 
+
+		$_product         = $values['data']; 
+        $eInserW          = $values['ExtraInsertsWeight'] * $values['quantity'];
+        $extraInserWeight = $extraInserWeight + $eInserW;
+        $pweight          = $_product->get_weight() * $values['quantity']; 
+        $productweight    = $productweight + $pweight;
+        $extraWeight =  $values['extralabelsOption'];
+
+        if (@array_column($extraWeight,'price')){
+
+           foreach($extraWeight as $data){
+
+              $labelweight        = $data['weight'];
+              $cardquty           = $data['cardquty'];
+              $cardweightWithqty  = $labelweight * $cardquty;
+              $totalCardWeight    = $totalCardWeight + $cardweightWithqty;
+           }
+        }
+
+        
+
+        }
+
+        $convertInsert = $extraInserWeight / 1000;
+        $convertTotalcardWeight  = $totalCardWeight / 1000;
+        
+        $weight =   $productweight + $convertInsert + $convertTotalcardWeight;
+		
+		$weight = wc_get_weight( $weight, 'kg' );
+
+
+
+        $setting                = new WOOMULTI_CURRENCY_Data();
+	    $selected_currencies    = $setting->get_list_currencies();
+	    $current_currency       = $setting->get_current_currency();
+
+	    $currency = $selected_currencies[$current_currency]['custom'];
+
+	    //echo '<pre>'; print_r($rates); die;
+
+
+       if(!empty($rates)){
+
+       	foreach($rates as $key=>$data){
+
+			$rrrFor = $rates[$key]->cost;
+
+			//$formatrate = number_format($rrrFor,2);
+
+			$formatrate = $rates[$key]->cost / $weight;
+
+			$formatrate = number_format($formatrate,2);
+
+			//$clave = $rates[$key]->label.' '.$weight.'kg (per kg '.$currency.' '.$formatrate.')';
+
+			$clave = $rates[$key]->label.' '.$weight.'Kg';
+
+       		$rates[$key]->label = $clave; 
+       		$rates[$key]->cost = $rates[$key]->cost; 
+       	}
+       }
+
+    return $rates;
+}
+
+add_filter( 'woocommerce_package_rates', 'wc_custom_change_flat_rates_cost', 10, 2 );
